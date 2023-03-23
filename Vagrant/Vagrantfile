@@ -17,7 +17,7 @@ Vagrant.configure("2") do |config|
 
   # Set Ansible provisioning
   config.vm.provision "ansible" do |ansible|
-    ansible.playbook = "server-init.yml"
+    ansible.playbook = "../Ansible/server-init.yml"
     ansible.ask_vault_pass = true
   end
 end
