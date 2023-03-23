@@ -1,0 +1,102 @@
+- name: Configurate Debian 11 server
+  hosts: all
+  become: true
+  vars_files: ./password.yml
+  tasks:
+    - name: Create user
+      user:
+        name: "maarsu"
+        shell: /bin/bash
+        password: "{{ maarsu_password | password_hash('sha512')}}"
+        groups: sudo
+        append: yes
+        create_home: true
+        state: present
+    - name: Update all apt packages
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+#    - name: Upgrade all apt packages
+#      apt: upgrade=dist force_apt_get=yes
+    - name: Install sudo
+      apt:
+        name: sudo
+        state: present
+    - name: Install Midnight Commander
+      apt:
+       name: mc
+       state: present
+    - name: Install htop
+      apt:
+       name: htop
+       state: present
+    - name: Install openjdk 11
+      apt:
+        name: openjdk-11-jdk
+        state: present
+    - name: Create udemx user
+      user:
+        name: udemx
+        shell: /bin/bash
+        password: "{{ udemx_password | password_hash('sha512')}}"
+        home: /opt/udemx
+        create_home: true
+        state: present
+    - name: Change the ssh port
+      shell: sed -i 's/^#Port 22/Port 2222/' /etc/ssh/sshd_config
+    - name: Install nginx
+      apt:
+       name: nginx
+       state: present
+    - name: Restart service nginx, in all cases
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
+    - name: Install mariaDB
+      apt:
+        name: mariadb-server
+        state: present
+    - name: Install iptables
+      apt:
+        name: iptables
+        state: present
+    - name: Install required packages for Docker
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - ca-certificates
+        - curl
+        - gnupg
+        - lsb-release
+    - name: Download Docker's GPG key
+      shell: curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg
+    - name: Add Docker's repository to sources list
+      shell: echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/trusted.gpg.d/docker.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    - name: Update all apt packages
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+    - name: Install Docker
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-compose
+    - name: Enable service docker, in all cases
+      ansible.builtin.service:
+        name: docker
+        state: enable
+    - name: Start service docker, in all cases
+      ansible.builtin.service:
+        name: docker
+        state: start
+    - name: Log in to Docker registry
+      community.general.docker_login:
+        username: "{{ docker_registry_username }}"
+        password: "{{ docker_registry_password }}"
+        registry_url: "{{ docker_registry_url }}"
+    - name: Run container from registry
+      community.general.docker_container:
+        name: mycontainer
+        image: "maarsupilami/webapp:3.0"
+        state: started
