@@ -1,0 +1,11 @@
+- name: Create SSL certificate!
+  hosts: all
+  become: true
+  tasks:
+    - name: Install OpenSSL
+      apt:
+        name: openssl
+        state: present
+    
+    - name: Generate SSL certificate
+      command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
