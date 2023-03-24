@@ -1,0 +1,33 @@
+- name: Close all ports, but open necessary!
+  hosts: your_host
+  become: true
+  tasks:
+    - name: Disable all ports
+      iptables:
+        chain: INPUT
+        policy: DROP
+        state: present
+    
+    - name: Allow port 80
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 80
+        state: present
+        jump: ACCEPT
+    
+    - name: Allow port 2222
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 2222
+        state: present
+        jump: ACCEPT
+    
+    - name: Allow port 15000
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 15000
+        state: present
+        jump: ACCEPT
