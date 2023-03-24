@@ -96,6 +96,7 @@
         registry_url: "{{ docker_registry_url }}"
     - name: Run container from registry
       community.general.docker_container:
-        name: mycontainer
+        name: flask-app
+        ports: "15000:8080"
         image: "maarsupilami/webapp:3.0"
         state: started
