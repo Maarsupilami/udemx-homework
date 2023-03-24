@@ -1,2 +1,4 @@
 .vagrant/
 password.yml
+.DS_Store/
+.DS_Store
