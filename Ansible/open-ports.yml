@@ -2,32 +2,18 @@
   hosts: your_host
   become: true
   tasks:
-    - name: Disable all ports
-      iptables:
+    - name: Drop all incoming traffic
+      community.general.iptables:
         chain: INPUT
-        policy: DROP
-        state: present
-    
-    - name: Allow port 80
-      iptables:
-        chain: INPUT
-        protocol: tcp
-        destination_port: 80
-        state: present
-        jump: ACCEPT
-    
-    - name: Allow port 2222
-      iptables:
+        jump: DROP
+
+    - name: Configure iptables rules
+      community.general.iptables:
         chain: INPUT
         protocol: tcp
-        destination_port: 2222
-        state: present
+        destination_port: "{{ item }}"
         jump: ACCEPT
-    
-    - name: Allow port 15000
-      iptables:
-        chain: INPUT
-        protocol: tcp
-        destination_port: 15000
-        state: present
-        jump: ACCEPT
+      loop:
+        - 80
+        - 2222
+        - 15000
