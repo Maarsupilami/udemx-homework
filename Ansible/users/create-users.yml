@@ -1,0 +1,29 @@
+- name: Create users
+  hosts: all
+  become: true
+  vars_files: ./user-data.yml
+  tasks:
+    - name: Create user - maarsu
+      ansible.builtin.user:
+        name: "maarsu"
+        shell: /bin/bash
+        password: "{{ maarsu_password | ansible.builtin.password_hash('sha512') }}"
+        groups: ['sudo' , 'docker']
+        append: true
+        create_home: true
+        state: present
+
+    - name: Add SSH key to authorized_keys
+      ansible.posix.authorized_key:
+        user: maarsu
+        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+        state: present
+
+    - name: Create user - udemx
+      ansible.builtin.user:
+        name: udemx
+        shell: /bin/bash
+        password: "{{ udemx_password | ansible.builtin.password_hash('sha512') }}"
+        home: /opt/udemx
+        create_home: true
+        state: present

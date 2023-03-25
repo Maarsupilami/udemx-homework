@@ -1,102 +1,143 @@
 - name: Configurate Debian 11 server
   hosts: all
   become: true
-  vars_files: ./password.yml
+  vars_files: ./config.yml
   tasks:
-    - name: Create user
-      user:
-        name: "maarsu"
-        shell: /bin/bash
-        password: "{{ maarsu_password | password_hash('sha512')}}"
-        groups: sudo
-        append: yes
-        create_home: true
-        state: present
+    - name: Change root password
+      ansible.builtin.user:
+        name: "root"
+        password: "{{ root_password | ansible.builtin.password_hash('sha512') }}"
+
     - name: Update all apt packages
-      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+      ansible.builtin.apt:
+        update_cache: true          # update the local package index cache
+        force_apt_get: true         # use 'apt-get' instead of 'apt' command
+        cache_valid_time: 3600     # cache valid time in seconds (1 hour)
+
     - name: Upgrade all apt packages
-      apt: upgrade=dist force_apt_get=yes
+      ansible.builtin.apt:
+        upgrade: dist              # upgrade all packages to the latest version
+        force_apt_get: true         # use 'apt-get' instead of 'apt' command
+
     - name: Install sudo
-      apt:
-        name: sudo
-        state: present
+      ansible.builtin.apt:
+        name: sudo        # name of the package to install
+        state: present    # ensure that the package is installed
+
     - name: Install Midnight Commander
-      apt:
-       name: mc
-       state: present
+      ansible.builtin.apt:
+        name: mc          # name of the package to install
+        state: present    # ensure that the package is installed
+
     - name: Install htop
-      apt:
-       name: htop
-       state: present
-    - name: Install openjdk 11
-      apt:
-        name: openjdk-11-jdk
-        state: present
-    - name: Create udemx user
-      user:
-        name: udemx
-        shell: /bin/bash
-        password: "{{ udemx_password | password_hash('sha512')}}"
-        home: /opt/udemx
-        create_home: true
-        state: present
-    - name: Change the ssh port
-      shell: sed -i 's/^#Port 22/Port 2222/' /etc/ssh/sshd_config
+      ansible.builtin.apt:
+        name: htop        # name of the package to install
+        state: present    # ensure that the package is installed
+
     - name: Install nginx
-      apt:
-       name: nginx
-       state: present
-    - name: Restart service nginx, in all cases
-      ansible.builtin.service:
+      ansible.builtin.apt:
         name: nginx
-        state: restarted
-    - name: Install mariaDB
-      apt:
-        name: mariadb-server
         state: present
+
     - name: Install iptables
-      apt:
+      ansible.builtin.apt:
         name: iptables
         state: present
-    
-    - name: Install apt-transport-https
-      ansible.builtin.apt:
-        name:
-          - apt-transport-https
-          - ca-certificates
-          - lsb-release
-          - gnupg
-        state: latest
-        update_cache: true
 
-    - name: Add signing key
-      ansible.builtin.apt_key:
-        url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+    - name: Install gnupg
+      apt:
+        name: gnupg
+        state: present
+      become: yes
+
+    - name: Add AdoptOpenJDK 8 repository key
+      apt_key:
+        url: "https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public"
+      become: yes
+
+    - name: Add AdoptOpenJDK 8 repository
+      apt_repository:
+        repo: "deb https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/ {{ ansible_distribution_release }} main"
+        state: present
+        filename: adoptopenjdk
+      become: yes
+
+    - name: Install AdoptOpenJDK 8
+      ansible.builtin.apt:
+        name: adoptopenjdk-8-hotspot   # name of the package to install
+        state: present                 # ensure that the package is installed
+      become: yes
+        
+    - name: Install openjdk 11
+      ansible.builtin.apt:
+        name: openjdk-11-jdk   # name of the package to install
+        state: present         # ensure that the package is installed
+
+    - name: Set default Java version to 8
+      ansible.builtin.command: update-alternatives --set javac /usr/lib/jvm/adoptopenjdk-8-hotspot-amd64/bin/javac
+
+    - name: Set SSH port to 2222
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Port\s+'
+        line: 'Port 2222'
         state: present
 
-    - name: Add repository into sources list
-      ansible.builtin.apt_repository:
-        repo: "deb [arch={{ ansible_architecture }}] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
-        state: present
-        filename: docker
+    - name: Set SSH port to 2222
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Port '
+        line: 'Port 2222'
+        backup: true
+      notify: Restart sshd
 
-    - name: Install Docker
+    - name: Enable PEM-based authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication '
+        line: 'PasswordAuthentication no'
+        backup: true
+      notify: Restart sshd
+
+    - name: Install fail2ban
       ansible.builtin.apt:
-        name:
-          - docker
-          - docker.io
-          - docker-compose
-          - docker-registry
-        state: latest
+        name: fail2ban
+        state: present
 
-    - name: Log in to Docker registry
-      community.general.docker_login:
-        username: "{{ docker_registry_username }}"
-        password: "{{ docker_registry_password }}"
-        registry_url: "{{ docker_registry_url }}"
-    - name: Run container from registry
-      community.general.docker_container:
-        name: flask-app
-        ports: "15000:8080"
-        image: "maarsupilami/webapp:3.0"
-        state: started
+    - name: Create fail2ban SSH filter configuration
+      ansible.builtin.copy:
+        content: |
+          [INCLUDES]
+          before = common.conf
+
+          [Definition]
+          _daemon = sshd
+
+          failregex = ^
+              %(__prefix_line)s     # optional prefix for system logs
+              (?:error: PAM: )?     # optional pattern for PAM errors
+              [aA]uthentication     # pattern for the word "authentication" with optional capitalization
+              (?:failure|error)     # pattern for the words "failure" or "error"
+              \sfor\s.*             # pattern for any characters after the above patterns until the word "from"
+              \sfrom\s<HOST>        # pattern for the word "from" followed by the IP address of the failed login attempt
+              (\svia\s\S+)?         # optional pattern for additional information about the connection
+              \s*$                  # optional whitespace characters at the end of the line followed by the end of line character
+        dest: /etc/fail2ban/filter.d/sshd.conf
+
+    - name: Create fail2ban SSH jail configuration
+      ansible.builtin.copy:
+        content: |
+          [sshd]
+          enabled = true
+          port = ssh
+          filter = sshd
+          logpath = /var/log/auth.log
+          maxretry = 3
+          bantime = 60
+        dest: /etc/fail2ban/jail.d/sshd.conf
+
+  handlers:
+    - name: Restart sshd
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
