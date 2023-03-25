@@ -70,3 +70,24 @@ Then run the playbook from the same folder as the `sites.yml`:
 `$ ansible-playbook sites.yml`
 
 **IMPORTANT NOTE:** Once you run the playbooks you have to forward guest's `port 2222` to host's `port 2222`, because the playbook modify the default ssh port!!!
+
+>### Scripts for the given tasks:
+
+**1.** [Creating MySQL Dump](https://gist.github.com/Maarsupilami/943893bcdeec2e24111334f79d2253ee).
+
+>Set to run daily at 2 am using the cron job scheduling utility.
+>>```bash
+$ crontab -e
+>>```
+
+Then add this line to the file `0 2 * * * ~/mysql_dump.sh`
+
+**2.** [Lists the three most recently modified files in the `/var/log` directory](https://gist.github.com/Maarsupilami/f249eaf4b6a5188d7fed3891675b8ede).
+
+**3.** [Lists all the files that have been modified in the last five days in the `/var/log/*` directories](https://gist.github.com/Maarsupilami/f249eaf4b6a5188d7fed3891675b8ede).
+
+**4.** [Reads the 15-minute load average from the `/proc/loadavg` file](https://gist.github.com/Maarsupilami/09e0d7ca2fefb0d8a9fa055af0f8de88).
+
+**5.** [Replaces a string](https://gist.github.com/Maarsupilami/9cc535b24064617cea56f3d54d9a2e2f).
+
+>>> :wq :) :) :)
