@@ -77,7 +77,7 @@ Then run the playbook from the same folder as the `sites.yml`:
 
 >Set to run daily at 2 am using the cron job scheduling utility.
 >>```bash
-$ crontab -e
+>>$ crontab -e
 >>```
 
 Then add this line to the file `0 2 * * * ~/mysql_dump.sh`
