@@ -4,3 +4,7 @@ password.yml
 .DS_Store
 __pycache__/
 venv/
+docker-data.yml
+db-data.yml
+user-data.yml
+config.yml
