@@ -1,0 +1,12 @@
+---
+- name: Configure iptables rules
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ item }}"
+    jump: ACCEPT
+  loop:
+    - 80
+    - 2222
+    - 7000
+    - 15000

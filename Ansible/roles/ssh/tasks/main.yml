@@ -1,0 +1,12 @@
+---
+- name: Create directory for keys
+  file:
+    path: /opt/udemx/.ssh
+    state: directory
+
+- name: Generate an OpenSSH keypair with the default values (4096 bits, rsa)
+  community.crypto.openssh_keypair:
+    owner: udemx
+    group: udemx
+    path: /opt/udemx/.ssh/udemx_key
+    comment: udemx@udemx.eu

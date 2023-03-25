@@ -1,0 +1,13 @@
+[Unit]
+Description=Docker container for {{ db_container_name }}
+After=docker.service
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker run --name {{ db_container_name }} --env MARIADB_USER={{ db_user }} --env MARIADB_PASSWORD={{ udemx_password }} --env MARIADB_ROOT_PASSWORD={{ udemx_password }}  {{ db_image }}
+ExecStop=/usr/bin/docker stop -t 2 {{ db_container_name }}
+ExecStopPost=/usr/bin/docker rm -f {{ db_container_name }}
+User=root
+
+[Install]
+WantedBy=multi-user.target

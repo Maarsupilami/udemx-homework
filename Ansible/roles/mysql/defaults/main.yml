@@ -1,0 +1,7 @@
+---
+db_container_name: mariadb
+db_ports: 
+ - "7000:3306"
+db_image: mariadb:11.0-rc
+db_name: udemx_db
+db_user: udemx

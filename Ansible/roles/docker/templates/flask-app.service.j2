@@ -1,0 +1,13 @@
+[Unit]
+Description=Docker container for {{ container_name }}
+After=docker.service
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker run -p {{ container_ports[0] }} --name {{ container_name }} {{ container_image }}
+ExecStop=/usr/bin/docker stop -t 2 {{ container_name }}
+ExecStopPost=/usr/bin/docker rm -f {{ container_name }}
+User=root
+
+[Install]
+WantedBy=multi-user.target

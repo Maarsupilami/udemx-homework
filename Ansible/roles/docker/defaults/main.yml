@@ -1,0 +1,5 @@
+---
+container_name: flask-app
+container_ports:
+  - 15000:5000
+container_image: maarsupilami/simple-webapp:2.0

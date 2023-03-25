@@ -1,0 +1,42 @@
+---
+- name: Apply configuration to the webserver
+  hosts: all
+  become: true
+  roles:
+    - init
+
+- name: Configure nginx
+  hosts: all
+  become: true
+  roles:
+    - nginx
+
+- name: Install and Configure docker
+  hosts: all
+  become: true
+  roles:
+    - docker
+
+- name: Create users
+  hosts: all
+  become: true
+  roles:
+    - user
+
+- name: Create ssh key for user udemx
+  hosts: all
+  become: true
+  roles:
+    - ssh
+
+- name: mariadb install and config
+  hosts: all
+  become: true
+  roles:
+    - mysql
+
+- name: Open ports on the webserver
+  hosts: all
+  become: true
+  roles:
+    - ports

@@ -1,0 +1,130 @@
+---
+- name: Change root password
+  ansible.builtin.user:
+    name: "root"
+    password: "{{ root_password | ansible.builtin.password_hash('sha512') }}"
+
+- name: Update all apt packages
+  ansible.builtin.apt:
+    update_cache: true          # update the local package index cache
+    force_apt_get: true         # use 'apt-get' instead of 'apt' command
+    cache_valid_time: 3600     # cache valid time in seconds (1 hour)
+
+- name: Upgrade all apt packages
+  ansible.builtin.apt:
+    upgrade: dist              # upgrade all packages to the latest version
+    force_apt_get: true         # use 'apt-get' instead of 'apt' command
+
+- name: Install sudo
+  ansible.builtin.apt:
+    name: sudo        # name of the package to install
+    state: present    # ensure that the package is installed
+
+- name: Install Midnight Commander
+  ansible.builtin.apt:
+    name: mc     
+    state: present 
+
+- name: Install htop
+  ansible.builtin.apt:
+    name: htop       
+    state: present    
+
+- name: Install git
+  ansible.builtin.apt:
+    name: git
+    state: present
+
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Install iptables
+  ansible.builtin.apt:
+    name: iptables
+    state: present
+
+- name: Install gnupg
+  ansible.builtin.apt:
+    name: gnupg
+    state: present
+
+- name: Add AdoptOpenJDK 8 repository key
+  ansible.builtin.apt_key:
+    url: "https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public"
+
+- name: Add AdoptOpenJDK 8 repository
+  apt_repository:
+    repo: "deb https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/ {{ ansible_distribution_release }} main"
+    state: present
+    filename: adoptopenjdk
+  become: true
+
+- name: Install AdoptOpenJDK 8
+  ansible.builtin.apt:
+    name: adoptopenjdk-8-hotspot   # name of the package to install
+    state: present                 # ensure that the package is installed
+  become: true
+    
+- name: Install openjdk 11
+  ansible.builtin.apt:
+    name: openjdk-11-jdk   # name of the package to install
+    state: present         # ensure that the package is installed
+
+- name: Set default Java version to 8
+  ansible.builtin.command: update-alternatives --set javac /usr/lib/jvm/adoptopenjdk-8-hotspot-amd64/bin/javac
+
+- name: Set SSH port to 2222
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?Port '
+    line: 'Port 2222'
+    backup: true
+  notify: Restart sshd
+
+- name: Enable PEM-based authentication
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication '
+    line: 'PasswordAuthentication no'
+    backup: true
+  notify: Restart sshd
+
+- name: Install fail2ban
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+
+- name: Create fail2ban SSH filter configuration
+  ansible.builtin.copy:
+    content: |
+      [INCLUDES]
+      before = common.conf
+
+      [Definition]
+      _daemon = sshd
+
+      failregex = ^
+          %(__prefix_line)s     # optional prefix for system logs
+          (?:error: PAM: )?     # optional pattern for PAM errors
+          [aA]uthentication     # pattern for the word "authentication" with optional capitalization
+          (?:failure|error)     # pattern for the words "failure" or "error"
+          \sfor\s.*             # pattern for any characters after the above patterns until the word "from"
+          \sfrom\s<HOST>        # pattern for the word "from" followed by the IP address of the failed login attempt
+          (\svia\s\S+)?         # optional pattern for additional information about the connection
+          \s*$                  # optional whitespace characters at the end of the line followed by the end of line character
+    dest: /etc/fail2ban/filter.d/sshd.conf
+
+- name: Create fail2ban SSH jail configuration
+  ansible.builtin.copy:
+    content: |
+      [sshd]
+      enabled = true
+      port = ssh
+      filter = sshd
+      logpath = /var/log/auth.log
+      maxretry = 3
+      bantime = 60
+    dest: /etc/fail2ban/jail.d/sshd.conf
+

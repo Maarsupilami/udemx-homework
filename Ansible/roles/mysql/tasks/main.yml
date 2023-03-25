@@ -1,0 +1,39 @@
+---
+- name: Run mariadb container from registry
+  community.general.docker_container:
+    name: "{{ db_container_name }}"
+    ports: "{{ db_ports }}"
+    image: "{{ db_image }}"
+    state: present
+
+- name: Create systemd unit file for mariadb container
+  ansible.builtin.template:
+    src: mariadb.service.j2
+    dest: /etc/systemd/system/{{ db_container_name }}.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload systemd to load new unit file
+  systemd:
+    daemon_reload: true
+
+- name: Enable and start container service
+  systemd:
+    name: "{{ db_container_name }}.service"
+    state: started
+    enabled: true
+
+- name: Create udemx_db
+  community.docker.docker_container_exec:
+    container: "{{ db_container_name }}"
+    user: root
+    command: mariadb -uroot -p{{ udemx_password }} -e "CREATE DATABASE {{ db_name }};"
+  tags: [ 'db' ]
+
+- name: Grant all access for user udemx to udemx_db
+  community.docker.docker_container_exec:
+    container: "{{ db_container_name }}"
+    user: root
+    command: mariadb -uroot -p{{ udemx_password }} -e "GRANT ALL PRIVILEGES ON {{ db_name }}.* TO 'udemx'@'localhost' IDENTIFIED BY '{{ udemx_password }}';"
+  tags: [ 'grant-access' ]
